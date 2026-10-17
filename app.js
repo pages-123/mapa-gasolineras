@@ -69,20 +69,33 @@ const buscador = document.getElementById('buscador');
 
 btnGps.addEventListener('click', () => {
     if (!navigator.geolocation) { alert("Tu navegador no soporta GPS."); return; }
+    
     btnGps.textContent = "Buscando...";
-    navigator.geolocation.getCurrentPosition((posicion) => {
-        ubicacionUsuario = L.latLng(posicion.coords.latitude, posicion.coords.longitude);
-        selectOrden.value = 'distancia';
-        if (marcadorUsuario) map.removeLayer(marcadorUsuario);
-        marcadorUsuario = L.circleMarker(ubicacionUsuario, { radius: 8, color: 'red', fillColor: '#f03', fillOpacity: 1 }).addTo(map).bindPopup("<b>¡Estás aquí!</b>").openPopup();
-        map.flyTo(ubicacionUsuario, 13);
-        btnMapa.click();
-        btnGps.textContent = "📍 Cerca de mí";
-        aplicarFiltros();
-    }, () => {
-        alert("Acepta los permisos de ubicación.");
-        btnGps.textContent = "📍 Cerca de mí";
-    });
+    
+    // Configuramos un límite de 10 segundos (10000 milisegundos)
+    const opcionesGPS = {
+        enableHighAccuracy: true,
+        timeout: 10000, 
+        maximumAge: 0
+    };
+
+    navigator.geolocation.getCurrentPosition(
+        (posicion) => {
+            ubicacionUsuario = L.latLng(posicion.coords.latitude, posicion.coords.longitude);
+            selectOrden.value = 'distancia';
+            if (marcadorUsuario) map.removeLayer(marcadorUsuario);
+            marcadorUsuario = L.circleMarker(ubicacionUsuario, { radius: 8, color: 'red', fillColor: '#f03', fillOpacity: 1 }).addTo(map).bindPopup("<b>¡Estás aquí!</b>").openPopup();
+            map.flyTo(ubicacionUsuario, 13);
+            btnMapa.click();
+            btnGps.textContent = "📍 Cerca de mí";
+            aplicarFiltros();
+        }, 
+        (error) => {
+            alert("No pudimos leer el GPS. Revisa el candado de la barra de direcciones o la configuración de privacidad de Windows.");
+            btnGps.textContent = "📍 Cerca de mí";
+        },
+        opcionesGPS
+    );
 });
 
 async function cargarProvincias() {
