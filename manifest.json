@@ -1,0 +1,15 @@
+{
+  "name": "Precio Combustibles",
+  "short_name": "Gasolineras",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f3f4f6",
+  "theme_color": "#1e3a8a",
+  "icons": [
+    {
+      "src": "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+      "sizes": "50x82",
+      "type": "image/png"
+    }
+  ]
+}
