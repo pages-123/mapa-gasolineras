@@ -122,12 +122,26 @@ function aplicarFiltros() {
     actualizarPantalla(resultados, combustible);
 }
 
-function alternarFavorito(estacion) {
-    const index = misFavoritos.findIndex(fav => fav.IDEESS === estacion.IDEESS);
-    if (index === -1) misFavoritos.push(estacion);
-    else misFavoritos.splice(index, 1);
+function alternarFavorito(estacion, evento) {
+    // Evitamos que al pulsar el botón se dispare también el clic de la tarjeta (que lleva al mapa)
+    if (evento) evento.stopPropagation();
+
+    // Creamos un ID único e infalible uniendo sus coordenadas
+    const idUnico = estacion.Latitud + estacion['Longitud (WGS84)'];
     
+    // Buscamos si ya está en favoritos comparando las coordenadas
+    const index = misFavoritos.findIndex(fav => (fav.Latitud + fav['Longitud (WGS84)']) === idUnico);
+    
+    if (index === -1) {
+        misFavoritos.push(estacion); // Si no está, la añadimos
+    } else {
+        misFavoritos.splice(index, 1); // Si ya estaba, la quitamos
+    }
+    
+    // Guardamos en el navegador
     localStorage.setItem('gasolinerasFavoritas', JSON.stringify(misFavoritos));
+    
+    // Recargamos la pantalla para que cambie el color del botón
     aplicarFiltros();
     if (vistaFavoritos.classList.contains('activa')) renderizarFavoritos();
 }
@@ -136,18 +150,22 @@ function crearTarjeta(est, tipoCombustible, contenedor) {
     const lat = parseFloat(est.Latitud.replace(',', '.'));
     const lon = parseFloat(est['Longitud (WGS84)'].replace(',', '.'));
     const precio = est[tipoCombustible]; 
-    if (!precio) return; // Si el favorito no tiene ese combustible
+    if (!precio) return; 
 
     const litrosDeposito = parseFloat(inputLitros.value) || 50;
     const costeLlenado = (parseFloat(precio.replace(',', '.')) * litrosDeposito).toFixed(2);
     const linkRuta = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`;
     
-    const esFavorito = misFavoritos.some(fav => fav.IDEESS === est.IDEESS);
+    // Comprobamos si es favorita usando sus coordenadas
+    const idUnico = est.Latitud + est['Longitud (WGS84)'];
+    const esFavorito = misFavoritos.some(fav => (fav.Latitud + fav['Longitud (WGS84)']) === idUnico);
+    
     const claseBtn = esFavorito ? 'btn-guardar guardado' : 'btn-guardar';
     const textoBtn = esFavorito ? '⭐ Guardado' : '☆ Guardar';
 
     const tarjeta = document.createElement('div');
     tarjeta.className = 'tarjeta-lista';
+    tarjeta.style.cursor = 'pointer'; // Ponemos el cursor de "mano" para indicar que es clicable
     tarjeta.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: flex-start;">
             <div style="font-weight: bold; color: #0056b3; font-size: 18px;">${est['Rótulo']}</div>
@@ -163,10 +181,19 @@ function crearTarjeta(est, tipoCombustible, contenedor) {
         </div>
     `;
     
-    tarjeta.querySelector('button').addEventListener('click', () => alternarFavorito(est));
+    // Evento para el botón de favoritos
+    tarjeta.querySelector('button').addEventListener('click', (e) => alternarFavorito(est, e));
+    
+    // NUEVO: Si haces clic en la tarjeta (fuera del botón o los enlaces), te lleva al mapa
+    tarjeta.addEventListener('click', (e) => {
+        if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'A') {
+            map.flyTo([lat, lon], 15);
+            btnMapa.click(); // Cambiamos automáticamente a la pestaña del mapa
+        }
+    });
+
     contenedor.appendChild(tarjeta);
 }
-
 function actualizarPantalla(gasolineras, tipoCombustible) {
     capaMarcadores.clearLayers();
     const contenedor = document.getElementById('contenedor-tarjetas');
