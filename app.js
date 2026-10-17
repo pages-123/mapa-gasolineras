@@ -1,21 +1,26 @@
 const btnMapa = document.getElementById('btn-mapa');
 const btnLista = document.getElementById('btn-lista');
 const btnGps = document.getElementById('btn-gps');
+const btnFavoritos = document.getElementById('btn-favoritos');
 const vistaMapa = document.getElementById('vista-mapa');
 const vistaLista = document.getElementById('vista-lista');
+const vistaFavoritos = document.getElementById('vista-favoritos');
 
-btnLista.addEventListener('click', () => {
-    btnMapa.classList.remove('activo');
-    btnLista.classList.add('activo');
-    vistaMapa.classList.remove('activa');
-    vistaLista.classList.add('activa');
+function cambiarVista(btnActivo, vistaActiva) {
+    [btnMapa, btnLista, btnFavoritos].forEach(btn => btn.classList.remove('activo'));
+    [vistaMapa, vistaLista, vistaFavoritos].forEach(vista => vista.classList.remove('activa'));
+    
+    btnActivo.classList.add('activo');
+    vistaActiva.classList.add('activa');
+}
+
+btnLista.addEventListener('click', () => cambiarVista(btnLista, vistaLista));
+btnFavoritos.addEventListener('click', () => {
+    cambiarVista(btnFavoritos, vistaFavoritos);
+    renderizarFavoritos();
 });
-
 btnMapa.addEventListener('click', () => {
-    btnLista.classList.remove('activo');
-    btnMapa.classList.add('activo');
-    vistaLista.classList.remove('activa');
-    vistaMapa.classList.add('activa');
+    cambiarVista(btnMapa, vistaMapa);
     setTimeout(() => { map.invalidateSize(); }, 100);
 });
 
@@ -32,6 +37,7 @@ L.Icon.Default.mergeOptions({
 let todasLasGasolineras = []; 
 let ubicacionUsuario = null; 
 let marcadorUsuario = null;
+let misFavoritos = JSON.parse(localStorage.getItem('gasolinerasFavoritas')) || [];
 
 const capaMarcadores = L.layerGroup().addTo(map);
 const selectCombustible = document.getElementById('select-combustible');
@@ -41,36 +47,20 @@ const selectOrden = document.getElementById('select-orden');
 const inputLitros = document.getElementById('input-litros');
 const buscador = document.getElementById('buscador');
 
-// --- GEOLOCALIZACIÓN ---
 btnGps.addEventListener('click', () => {
-    if (!navigator.geolocation) {
-        alert("Tu navegador no soporta GPS.");
-        return;
-    }
-    
+    if (!navigator.geolocation) { alert("Tu navegador no soporta GPS."); return; }
     btnGps.textContent = "Buscando...";
-    
     navigator.geolocation.getCurrentPosition((posicion) => {
-        const lat = posicion.coords.latitude;
-        const lon = posicion.coords.longitude;
-        ubicacionUsuario = L.latLng(lat, lon);
-
-        // Cambiar automáticamente a "Más cercanas"
+        ubicacionUsuario = L.latLng(posicion.coords.latitude, posicion.coords.longitude);
         selectOrden.value = 'distancia';
-
-        // Poner marcador de usuario (círculo rojo)
         if (marcadorUsuario) map.removeLayer(marcadorUsuario);
         marcadorUsuario = L.circleMarker(ubicacionUsuario, { radius: 8, color: 'red', fillColor: '#f03', fillOpacity: 1 }).addTo(map).bindPopup("<b>¡Estás aquí!</b>").openPopup();
-
-        // Volar al usuario y cambiar a la vista de mapa
         map.flyTo(ubicacionUsuario, 13);
         btnMapa.click();
-        
         btnGps.textContent = "📍 Cerca de mí";
         aplicarFiltros();
-        
     }, () => {
-        alert("Acepta los permisos de ubicación en tu navegador para usar esta función.");
+        alert("Acepta los permisos de ubicación.");
         btnGps.textContent = "📍 Cerca de mí";
     });
 });
@@ -92,11 +82,9 @@ async function cargarProvincias() {
 }
 
 async function cargarGasolineras(idProvincia) {
-    const url = `https://sedeaplicaciones.minetur.gob.es/ServiciosRESTCarburantes/PreciosCarburantes/EstacionesTerrestres/FiltroProvincia/${idProvincia}`;
     try {
-        const respuesta = await fetch(url);
+        const respuesta = await fetch(`https://sedeaplicaciones.minetur.gob.es/ServiciosRESTCarburantes/PreciosCarburantes/EstacionesTerrestres/FiltroProvincia/${idProvincia}`);
         const datos = await respuesta.json();
-        
         todasLasGasolineras = datos.ListaEESSPrecio.filter(est => !isNaN(parseFloat(est.Latitud.replace(',', '.'))));
 
         const municipiosUnicos = [...new Set(todasLasGasolineras.map(est => est.Municipio))].sort();
@@ -107,7 +95,6 @@ async function cargarGasolineras(idProvincia) {
             option.textContent = mun;
             selectMunicipio.appendChild(option);
         });
-
         aplicarFiltros();
     } catch (error) { console.error(error); }
 }
@@ -115,7 +102,6 @@ async function cargarGasolineras(idProvincia) {
 function aplicarFiltros() {
     const combustible = selectCombustible.value;
     let resultados = todasLasGasolineras.filter(est => est[combustible] && est[combustible] !== "");
-
     if (selectMunicipio.value !== "") resultados = resultados.filter(est => est.Municipio === selectMunicipio.value);
     if (buscador.value !== "") resultados = resultados.filter(est => est['Rótulo'].toLowerCase().includes(buscador.value.toLowerCase()));
 
@@ -133,56 +119,89 @@ function aplicarFiltros() {
             return orden === 'barato' ? precioA - precioB : precioB - precioA;
         }
     });
-
     actualizarPantalla(resultados, combustible);
+}
+
+function alternarFavorito(estacion) {
+    const index = misFavoritos.findIndex(fav => fav.IDEESS === estacion.IDEESS);
+    if (index === -1) misFavoritos.push(estacion);
+    else misFavoritos.splice(index, 1);
+    
+    localStorage.setItem('gasolinerasFavoritas', JSON.stringify(misFavoritos));
+    aplicarFiltros();
+    if (vistaFavoritos.classList.contains('activa')) renderizarFavoritos();
+}
+
+function crearTarjeta(est, tipoCombustible, contenedor) {
+    const lat = parseFloat(est.Latitud.replace(',', '.'));
+    const lon = parseFloat(est['Longitud (WGS84)'].replace(',', '.'));
+    const precio = est[tipoCombustible]; 
+    if (!precio) return; // Si el favorito no tiene ese combustible
+
+    const litrosDeposito = parseFloat(inputLitros.value) || 50;
+    const costeLlenado = (parseFloat(precio.replace(',', '.')) * litrosDeposito).toFixed(2);
+    const linkRuta = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`;
+    
+    const esFavorito = misFavoritos.some(fav => fav.IDEESS === est.IDEESS);
+    const claseBtn = esFavorito ? 'btn-guardar guardado' : 'btn-guardar';
+    const textoBtn = esFavorito ? '⭐ Guardado' : '☆ Guardar';
+
+    const tarjeta = document.createElement('div');
+    tarjeta.className = 'tarjeta-lista';
+    tarjeta.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div style="font-weight: bold; color: #0056b3; font-size: 18px;">${est['Rótulo']}</div>
+            <button class="${claseBtn}">${textoBtn}</button>
+        </div>
+        <div style="font-size: 14px; color: #555; margin-bottom: 8px;">${est['Municipio']} - ${est['Dirección']}</div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px;">
+            <div>
+                <div style="color: #d9534f; font-weight: bold; font-size: 20px;">${precio} €/L</div>
+                <div style="color: #28a745; font-size: 14px; font-weight: bold;">Llenar: ${costeLlenado} €</div>
+            </div>
+            <a href="${linkRuta}" target="_blank" style="background: #007bff; color: white; padding: 8px 12px; border-radius: 4px; text-decoration: none; font-size: 14px;">📍 Ruta</a>
+        </div>
+    `;
+    
+    tarjeta.querySelector('button').addEventListener('click', () => alternarFavorito(est));
+    contenedor.appendChild(tarjeta);
 }
 
 function actualizarPantalla(gasolineras, tipoCombustible) {
     capaMarcadores.clearLayers();
-    document.getElementById('contenedor-tarjetas').innerHTML = '';
-    const litrosDeposito = parseFloat(inputLitros.value) || 50;
+    const contenedor = document.getElementById('contenedor-tarjetas');
+    contenedor.innerHTML = '';
     const nombreCombustible = selectCombustible.options[selectCombustible.selectedIndex].text;
 
     gasolineras.forEach(est => {
         const lat = parseFloat(est.Latitud.replace(',', '.'));
         const lon = parseFloat(est['Longitud (WGS84)'].replace(',', '.'));
-        const precio = est[tipoCombustible]; 
-        const costeLlenado = (parseFloat(precio.replace(',', '.')) * litrosDeposito).toFixed(2);
-        const linkRuta = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`;
-        
-        let infoDistancia = "";
-        if (ubicacionUsuario && selectOrden.value === 'distancia') {
-            const distKm = (map.distance(ubicacionUsuario, [lat, lon]) / 1000).toFixed(1);
-            infoDistancia = `<div style="color: #666; font-size: 13px;">A ${distKm} km de ti</div>`;
-        }
-
         const marcador = L.marker([lat, lon]);
-        marcador.bindPopup(`<b>${est['Rótulo']}</b><br><b style="color: #d9534f;">${nombreCombustible}: ${precio} €/L</b><br><a href="${linkRuta}" target="_blank" style="color: #007bff; text-decoration: none;">📍 Ir</a>`);
+        marcador.bindPopup(`<b>${est['Rótulo']}</b><br><b style="color: #d9534f;">${nombreCombustible}: ${est[tipoCombustible]} €/L</b>`);
         capaMarcadores.addLayer(marcador);
 
-        const tarjeta = document.createElement('div');
-        tarjeta.className = 'tarjeta-lista';
-        tarjeta.innerHTML = `
-            <div style="font-weight: bold; color: #0056b3; font-size: 18px;">${est['Rótulo']}</div>
-            <div style="font-size: 14px; color: #555; margin-bottom: 8px;">${est['Dirección']}</div>
-            ${infoDistancia}
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px;">
-                <div>
-                    <div style="color: #d9534f; font-weight: bold; font-size: 20px;">${precio} €/L</div>
-                    <div style="color: #28a745; font-size: 14px; font-weight: bold;">Llenar: ${costeLlenado} €</div>
-                </div>
-                <a href="${linkRuta}" target="_blank" style="background: #007bff; color: white; padding: 8px 12px; border-radius: 4px; text-decoration: none; font-size: 14px;">📍 Ruta</a>
-            </div>
-        `;
-        document.getElementById('contenedor-tarjetas').appendChild(tarjeta);
+        crearTarjeta(est, tipoCombustible, contenedor);
     });
 }
 
+function renderizarFavoritos() {
+    const contenedor = document.getElementById('contenedor-favoritos');
+    contenedor.innerHTML = '';
+    const tipoCombustible = selectCombustible.value;
+
+    if (misFavoritos.length === 0) {
+        contenedor.innerHTML = '<p style="text-align: center; color: #777;">Aún no tienes gasolineras guardadas. Usa el botón "☆ Guardar" en la lista.</p>';
+        return;
+    }
+
+    misFavoritos.forEach(est => crearTarjeta(est, tipoCombustible, contenedor));
+}
+
 selectProvincia.addEventListener('change', (evento) => cargarGasolineras(evento.target.value));
-selectCombustible.addEventListener('change', aplicarFiltros);
+selectCombustible.addEventListener('change', () => { aplicarFiltros(); if(vistaFavoritos.classList.contains('activa')) renderizarFavoritos(); });
 selectMunicipio.addEventListener('change', aplicarFiltros);
 selectOrden.addEventListener('change', aplicarFiltros);
-inputLitros.addEventListener('input', aplicarFiltros);
+inputLitros.addEventListener('input', () => { aplicarFiltros(); if(vistaFavoritos.classList.contains('activa')) renderizarFavoritos(); });
 buscador.addEventListener('input', aplicarFiltros);
 
 cargarProvincias();
