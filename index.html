@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gasolineras</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body { margin: 0; padding: 0; font-family: Arial, sans-serif; display: flex; flex-direction: column; height: 100vh; background-color: #f4f4f9; }
+        
+        header { background: #333; padding-top: 10px; }
+        h1 { text-align: center; color: white; margin: 0; padding: 10px; font-size: 20px; }
+        .pestanas { display: flex; justify-content: center; background: #333; padding-bottom: 10px; flex-wrap: wrap; gap: 5px; }
+        .pestanas button { background: #555; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 4px; font-size: 16px; transition: 0.3s; }
+        .pestanas button:hover { background: #777; }
+        .pestanas button.activo { background: #007bff; font-weight: bold; }
+        #btn-gps { background: #28a745; font-weight: bold; }
+        #btn-gps:hover { background: #218838; }
+
+        .vista { display: none; width: 100%; height: 100%; overflow: hidden; flex: 1; }
+        .vista.activa { display: flex; flex-direction: column; }
+        #miMapa { width: 100%; height: 100%; }
+        #vista-lista { padding: 15px; box-sizing: border-box; overflow-y: auto; align-items: center; }
+        
+        #panel-filtros { background: white; padding: 15px; margin-bottom: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); width: 100%; max-width: 600px; box-sizing: border-box; }
+        .fila-filtros { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+        .fila-filtros select { flex: 1; min-width: 140px; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; }
+        #buscador { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 14px; margin-top: 10px; }
+
+        #contenedor-tarjetas { width: 100%; max-width: 600px; }
+        .tarjeta-lista { background: white; padding: 15px; margin-bottom: 10px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .tarjeta-lista:hover { border-left: 4px solid #007bff; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Precio Combustibles en Tiempo Real</h1>
+        <div class="pestanas">
+            <button id="btn-mapa" class="activo">🌍 Ver Mapa</button>
+            <button id="btn-lista">📋 Ver Lista</button>
+            <button id="btn-gps">📍 Cerca de mí</button>
+        </div>
+    </header>
+    
+    <div id="vista-mapa" class="vista activa">
+        <div id="miMapa"></div>
+    </div>
+
+    <div id="vista-lista" class="vista">
+        <div id="panel-filtros">
+            <div class="fila-filtros">
+                <select id="select-combustible" style="font-weight: bold; border-color: #007bff; color: #0056b3;">
+                    <option value="Precio Gasoleo A">Diésel (Gasóleo A)</option>
+                    <option value="Precio Gasoleo Premium">Diésel Premium</option>
+                    <option value="Precio Gasolina 95 E5">Gasolina 95</option>
+                    <option value="Precio Gasolina 98 E5">Gasolina 98</option>
+                </select>
+                <select id="select-provincia">
+                    <option value="">Cargando provincias...</option>
+                </select>
+            </div>
+            <div class="fila-filtros">
+                <select id="select-municipio">
+                    <option value="">Todos los municipios</option>
+                </select>
+                <select id="select-orden">
+                    <option value="barato">Más barato primero</option>
+                    <option value="caro">Más caro primero</option>
+                    <option value="distancia">Más cercanas primero</option>
+                </select>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px; background: #f8f9fa; padding: 10px; border-radius: 6px; border: 1px solid #ddd;">
+                <label for="input-litros" style="font-size: 14px; font-weight: bold; color: #333;">Capacidad depósito:</label>
+                <input type="number" id="input-litros" value="60" min="1" max="150" style="padding: 6px; border-radius: 4px; border: 1px solid #ccc; width: 70px; font-size: 14px;">
+                <span style="font-size: 14px; color: #555;">Litros</span>
+            </div>
+            <input type="text" id="buscador" placeholder="Buscar por nombre de gasolinera...">
+        </div>
+        <div id="contenedor-tarjetas"></div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
