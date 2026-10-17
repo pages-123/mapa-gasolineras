@@ -110,5 +110,18 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="app.js"></script>
+    <!-- ... tu código anterior ... -->
+    
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="app.js"></script>
+    
+    <!-- AÑADE ESTO JUSTO AQUÍ -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+              .then(() => console.log('Service Worker registrado con éxito'))
+              .catch((error) => console.log('Falló el registro del Service Worker', error));
+        }
+    </script>
 </body>
 </html>
