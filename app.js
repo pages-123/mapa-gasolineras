@@ -2,6 +2,26 @@ const btnMapa = document.getElementById('btn-mapa');
 const btnLista = document.getElementById('btn-lista');
 const btnGps = document.getElementById('btn-gps');
 const btnFavoritos = document.getElementById('btn-favoritos');
+const btnTema = document.getElementById('btn-tema');
+
+// Leer preferencia guardada al cargar la página
+if (localStorage.getItem('temaOscuro') === 'activo') {
+    document.body.classList.add('dark-mode');
+    btnTema.textContent = '☀️ Modo Claro';
+}
+
+// Evento para cambiar de tema
+btnTema.addEventListener('click', () => {
+    document.body.classList.toggle('dark-mode');
+    
+    if (document.body.classList.contains('dark-mode')) {
+        localStorage.setItem('temaOscuro', 'activo');
+        btnTema.textContent = '☀️ Modo Claro';
+    } else {
+        localStorage.setItem('temaOscuro', 'inactivo');
+        btnTema.textContent = '🌓 Modo Oscuro';
+    }
+});
 const vistaMapa = document.getElementById('vista-mapa');
 const vistaLista = document.getElementById('vista-lista');
 const vistaFavoritos = document.getElementById('vista-favoritos');
