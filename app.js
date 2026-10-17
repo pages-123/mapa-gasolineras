@@ -166,18 +166,25 @@ function crearTarjeta(est, tipoCombustible, contenedor) {
     const tarjeta = document.createElement('div');
     tarjeta.className = 'tarjeta-lista';
     tarjeta.style.cursor = 'pointer'; // Ponemos el cursor de "mano" para indicar que es clicable
+    const nombreCombustible = selectCombustible.options[selectCombustible.selectedIndex].text;
     tarjeta.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-            <div style="font-weight: bold; color: #0056b3; font-size: 18px;">${est['Rótulo']}</div>
+        <div class="tarjeta-header">
+            <div>
+                <div class="etiqueta-combustible">${nombreCombustible}</div>
+                <div style="font-weight: 800; color: #1e3a8a; font-size: 18px;">${est['Rótulo']}</div>
+            </div>
             <button class="${claseBtn}">${textoBtn}</button>
         </div>
-        <div style="font-size: 14px; color: #555; margin-bottom: 8px;">${est['Municipio']} - ${est['Dirección']}</div>
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px;">
+        
+        <div class="texto-direccion">📍 ${est['Municipio']} - ${est['Dirección']}</div>
+        
+        <div class="caja-precio">
             <div>
-                <div style="color: #d9534f; font-weight: bold; font-size: 20px;">${precio} €/L</div>
-                <div style="color: #28a745; font-size: 14px; font-weight: bold;">Llenar: ${costeLlenado} €</div>
+                <div class="label-precio">Precio por litro</div>
+                <div class="precio-gigante">${precio} <span class="simbolo-euro">€</span></div>
+                <div class="info-llenado">⛽ Llenar (${litrosDeposito}L): ${costeLlenado} €</div>
             </div>
-            <a href="${linkRuta}" target="_blank" style="background: #007bff; color: white; padding: 8px 12px; border-radius: 4px; text-decoration: none; font-size: 14px;">📍 Ruta</a>
+            <a href="${linkRuta}" target="_blank" class="btn-ruta">🗺️ Ruta</a>
         </div>
     `;
     
