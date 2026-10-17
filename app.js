@@ -72,10 +72,10 @@ btnGps.addEventListener('click', () => {
     
     btnGps.textContent = "Buscando...";
     
-    // Configuramos un límite de 10 segundos (10000 milisegundos)
+ // Aumentamos a 15 segundos y quitamos la exigencia de alta precisión
     const opcionesGPS = {
-        enableHighAccuracy: true,
-        timeout: 10000, 
+        enableHighAccuracy: false, 
+        timeout: 15000, 
         maximumAge: 0
     };
 
