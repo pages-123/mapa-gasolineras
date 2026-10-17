@@ -17,29 +17,35 @@
         .pestanas button.activo { background: #007bff; font-weight: bold; }
         #btn-gps { background: #28a745; font-weight: bold; }
         #btn-gps:hover { background: #218838; }
+        #btn-favoritos { background: #ffc107; color: #333; font-weight: bold; }
+        #btn-favoritos:hover { background: #e0a800; }
 
         .vista { display: none; width: 100%; height: 100%; overflow: hidden; flex: 1; }
         .vista.activa { display: flex; flex-direction: column; }
         #miMapa { width: 100%; height: 100%; }
-        #vista-lista { padding: 15px; box-sizing: border-box; overflow-y: auto; align-items: center; }
+        #vista-lista, #vista-favoritos { padding: 15px; box-sizing: border-box; overflow-y: auto; align-items: center; }
         
         #panel-filtros { background: white; padding: 15px; margin-bottom: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); width: 100%; max-width: 600px; box-sizing: border-box; }
         .fila-filtros { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
         .fila-filtros select { flex: 1; min-width: 140px; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; }
         #buscador { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 14px; margin-top: 10px; }
 
-        #contenedor-tarjetas { width: 100%; max-width: 600px; }
+        .contenedor-tarjetas { width: 100%; max-width: 600px; }
         .tarjeta-lista { background: white; padding: 15px; margin-bottom: 10px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .tarjeta-lista:hover { border-left: 4px solid #007bff; }
+        .btn-guardar { background: none; border: 1px solid #ccc; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 14px; transition: 0.2s; }
+        .btn-guardar:hover { background: #f8f9fa; }
+        .btn-guardar.guardado { border-color: #ffc107; background: #fff3cd; color: #856404; }
     </style>
 </head>
 <body>
     <header>
         <h1>Precio Combustibles en Tiempo Real</h1>
         <div class="pestanas">
-            <button id="btn-mapa" class="activo">🌍 Ver Mapa</button>
-            <button id="btn-lista">📋 Ver Lista</button>
+            <button id="btn-mapa" class="activo">🌍 Mapa</button>
+            <button id="btn-lista">📋 Lista</button>
             <button id="btn-gps">📍 Cerca de mí</button>
+            <button id="btn-favoritos">⭐ Favoritos</button>
         </div>
     </header>
     
@@ -77,9 +83,18 @@
             </div>
             <input type="text" id="buscador" placeholder="Buscar por nombre de gasolinera...">
         </div>
-        <div id="contenedor-tarjetas"></div>
+        <div id="contenedor-tarjetas" class="contenedor-tarjetas"></div>
     </div>
 
+    <div id="vista-favoritos" class="vista">
+        <h2 style="font-size: 18px; color: #333; margin-top: 0;">Mis Gasolineras Guardadas</h2>
+        <div id="contenedor-favoritos" class="contenedor-tarjetas"></div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="app.js"></script>
 </body>
