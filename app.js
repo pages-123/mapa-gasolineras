@@ -4,16 +4,13 @@ const btnGps = document.getElementById('btn-gps');
 const btnFavoritos = document.getElementById('btn-favoritos');
 const btnTema = document.getElementById('btn-tema');
 
-// Leer preferencia guardada al cargar la página
 if (localStorage.getItem('temaOscuro') === 'activo') {
     document.body.classList.add('dark-mode');
     btnTema.textContent = '☀️ Modo Claro';
 }
 
-// Evento para cambiar de tema
 btnTema.addEventListener('click', () => {
     document.body.classList.toggle('dark-mode');
-    
     if (document.body.classList.contains('dark-mode')) {
         localStorage.setItem('temaOscuro', 'activo');
         btnTema.textContent = '☀️ Modo Claro';
@@ -22,6 +19,7 @@ btnTema.addEventListener('click', () => {
         btnTema.textContent = '🌓 Modo Oscuro';
     }
 });
+
 const vistaMapa = document.getElementById('vista-mapa');
 const vistaLista = document.getElementById('vista-lista');
 const vistaFavoritos = document.getElementById('vista-favoritos');
@@ -29,24 +27,16 @@ const vistaFavoritos = document.getElementById('vista-favoritos');
 function cambiarVista(btnActivo, vistaActiva) {
     [btnMapa, btnLista, btnFavoritos].forEach(btn => btn.classList.remove('activo'));
     [vistaMapa, vistaLista, vistaFavoritos].forEach(vista => vista.classList.remove('activa'));
-    
     btnActivo.classList.add('activo');
     vistaActiva.classList.add('activa');
 }
 
 btnLista.addEventListener('click', () => cambiarVista(btnLista, vistaLista));
-btnFavoritos.addEventListener('click', () => {
-    cambiarVista(btnFavoritos, vistaFavoritos);
-    renderizarFavoritos();
-});
-btnMapa.addEventListener('click', () => {
-    cambiarVista(btnMapa, vistaMapa);
-    setTimeout(() => { map.invalidateSize(); }, 100);
-});
+btnFavoritos.addEventListener('click', () => { cambiarVista(btnFavoritos, vistaFavoritos); renderizarFavoritos(); });
+btnMapa.addEventListener('click', () => { cambiarVista(btnMapa, vistaMapa); setTimeout(() => { map.invalidateSize(); }, 100); });
 
 const map = L.map('miMapa').setView([41.9794, 2.8214], 10);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(map);
-
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
     iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
@@ -65,19 +55,13 @@ const selectProvincia = document.getElementById('select-provincia');
 const selectMunicipio = document.getElementById('select-municipio');
 const selectOrden = document.getElementById('select-orden');
 const inputLitros = document.getElementById('input-litros');
+const inputConsumo = document.getElementById('input-consumo');
 const buscador = document.getElementById('buscador');
 
 btnGps.addEventListener('click', () => {
     if (!navigator.geolocation) { alert("Tu navegador no soporta GPS."); return; }
-    
     btnGps.textContent = "Buscando...";
-    
- // Aumentamos a 15 segundos y quitamos la exigencia de alta precisión
-    const opcionesGPS = {
-        enableHighAccuracy: false, 
-        timeout: 15000, 
-        maximumAge: 0
-    };
+    const opcionesGPS = { enableHighAccuracy: false, timeout: 15000, maximumAge: 0 };
 
     navigator.geolocation.getCurrentPosition(
         (posicion) => {
@@ -91,10 +75,9 @@ btnGps.addEventListener('click', () => {
             aplicarFiltros();
         }, 
         (error) => {
-            alert("No pudimos leer el GPS. Revisa el candado de la barra de direcciones o la configuración de privacidad de Windows.");
+            alert("No pudimos leer el GPS.");
             btnGps.textContent = "📍 Cerca de mí";
-        },
-        opcionesGPS
+        }, opcionesGPS
     );
 });
 
@@ -119,7 +102,6 @@ async function cargarGasolineras(idProvincia) {
         const respuesta = await fetch(`https://sedeaplicaciones.minetur.gob.es/ServiciosRESTCarburantes/PreciosCarburantes/EstacionesTerrestres/FiltroProvincia/${idProvincia}`);
         const datos = await respuesta.json();
         todasLasGasolineras = datos.ListaEESSPrecio.filter(est => !isNaN(parseFloat(est.Latitud.replace(',', '.'))));
-
         const municipiosUnicos = [...new Set(todasLasGasolineras.map(est => est.Municipio))].sort();
         selectMunicipio.innerHTML = '<option value="">Todos los municipios</option>';
         municipiosUnicos.forEach(mun => {
@@ -156,25 +138,12 @@ function aplicarFiltros() {
 }
 
 function alternarFavorito(estacion, evento) {
-    // Evitamos que al pulsar el botón se dispare también el clic de la tarjeta (que lleva al mapa)
     if (evento) evento.stopPropagation();
-
-    // Creamos un ID único e infalible uniendo sus coordenadas
     const idUnico = estacion.Latitud + estacion['Longitud (WGS84)'];
-    
-    // Buscamos si ya está en favoritos comparando las coordenadas
     const index = misFavoritos.findIndex(fav => (fav.Latitud + fav['Longitud (WGS84)']) === idUnico);
-    
-    if (index === -1) {
-        misFavoritos.push(estacion); // Si no está, la añadimos
-    } else {
-        misFavoritos.splice(index, 1); // Si ya estaba, la quitamos
-    }
-    
-    // Guardamos en el navegador
+    if (index === -1) misFavoritos.push(estacion);
+    else misFavoritos.splice(index, 1);
     localStorage.setItem('gasolinerasFavoritas', JSON.stringify(misFavoritos));
-    
-    // Recargamos la pantalla para que cambie el color del botón
     aplicarFiltros();
     if (vistaFavoritos.classList.contains('activa')) renderizarFavoritos();
 }
@@ -185,20 +154,31 @@ function crearTarjeta(est, tipoCombustible, contenedor) {
     const precio = est[tipoCombustible]; 
     if (!precio) return; 
 
-    const litrosDeposito = parseFloat(inputLitros.value) || 50;
-    const costeLlenado = (parseFloat(precio.replace(',', '.')) * litrosDeposito).toFixed(2);
+    const precioNum = parseFloat(precio.replace(',', '.'));
+    const litrosDeposito = parseFloat(inputLitros.value) || 60;
+    const consumoVehiculo = parseFloat(inputConsumo.value) || 5.5;
+    const costeLlenado = (precioNum * litrosDeposito).toFixed(2);
     const linkRuta = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`;
     
-    // Comprobamos si es favorita usando sus coordenadas
+    let infoDesvio = '';
+    if (ubicacionUsuario) {
+        const distKm = map.distance(ubicacionUsuario, [lat, lon]) / 1000;
+        const costeTrayectoIdaVuelta = ((distKm * 2) / 100) * consumoVehiculo * precioNum;
+        const totalReal = (parseFloat(costeLlenado) + costeTrayectoIdaVuelta).toFixed(2);
+        
+        infoDesvio = `
+            <div style="background: #fee2e2; color: #991b1b; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 700; margin-top: 4px; display: inline-block;">🚗 Gasto en ir y volver: +${costeTrayectoIdaVuelta.toFixed(2)} €</div>
+            <div style="color: #4338ca; font-size: 14px; font-weight: bold; margin-top: 4px;">Total (Llenado + Viaje): ${totalReal} €</div>
+        `;
+    }
+
     const idUnico = est.Latitud + est['Longitud (WGS84)'];
     const esFavorito = misFavoritos.some(fav => (fav.Latitud + fav['Longitud (WGS84)']) === idUnico);
-    
     const claseBtn = esFavorito ? 'btn-guardar guardado' : 'btn-guardar';
     const textoBtn = esFavorito ? '⭐ Guardado' : '☆ Guardar';
 
     const tarjeta = document.createElement('div');
     tarjeta.className = 'tarjeta-lista';
-    tarjeta.style.cursor = 'pointer'; // Ponemos el cursor de "mano" para indicar que es clicable
     const nombreCombustible = selectCombustible.options[selectCombustible.selectedIndex].text;
     tarjeta.innerHTML = `
         <div class="tarjeta-header">
@@ -208,32 +188,25 @@ function crearTarjeta(est, tipoCombustible, contenedor) {
             </div>
             <button class="${claseBtn}">${textoBtn}</button>
         </div>
-        
         <div class="texto-direccion">📍 ${est['Municipio']} - ${est['Dirección']}</div>
-        
         <div class="caja-precio">
             <div>
                 <div class="label-precio">Precio por litro</div>
                 <div class="precio-gigante">${precio} <span class="simbolo-euro">€</span></div>
                 <div class="info-llenado">⛽ Llenar (${litrosDeposito}L): ${costeLlenado} €</div>
+                ${infoDesvio}
             </div>
             <a href="${linkRuta}" target="_blank" class="btn-ruta">🗺️ Ruta</a>
         </div>
     `;
     
-    // Evento para el botón de favoritos
     tarjeta.querySelector('button').addEventListener('click', (e) => alternarFavorito(est, e));
-    
-    // NUEVO: Si haces clic en la tarjeta (fuera del botón o los enlaces), te lleva al mapa
     tarjeta.addEventListener('click', (e) => {
-        if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'A') {
-            map.flyTo([lat, lon], 15);
-            btnMapa.click(); // Cambiamos automáticamente a la pestaña del mapa
-        }
+        if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'A') { map.flyTo([lat, lon], 15); btnMapa.click(); }
     });
-
     contenedor.appendChild(tarjeta);
 }
+
 function actualizarPantalla(gasolineras, tipoCombustible) {
     capaMarcadores.clearLayers();
     const contenedor = document.getElementById('contenedor-tarjetas');
@@ -246,7 +219,6 @@ function actualizarPantalla(gasolineras, tipoCombustible) {
         const marcador = L.marker([lat, lon]);
         marcador.bindPopup(`<b>${est['Rótulo']}</b><br><b style="color: #d9534f;">${nombreCombustible}: ${est[tipoCombustible]} €/L</b>`);
         capaMarcadores.addLayer(marcador);
-
         crearTarjeta(est, tipoCombustible, contenedor);
     });
 }
@@ -255,12 +227,10 @@ function renderizarFavoritos() {
     const contenedor = document.getElementById('contenedor-favoritos');
     contenedor.innerHTML = '';
     const tipoCombustible = selectCombustible.value;
-
     if (misFavoritos.length === 0) {
-        contenedor.innerHTML = '<p style="text-align: center; color: #777;">Aún no tienes gasolineras guardadas. Usa el botón "☆ Guardar" en la lista.</p>';
+        contenedor.innerHTML = '<p style="text-align: center; color: #777;">Aún no tienes gasolineras guardadas.</p>';
         return;
     }
-
     misFavoritos.forEach(est => crearTarjeta(est, tipoCombustible, contenedor));
 }
 
@@ -269,6 +239,7 @@ selectCombustible.addEventListener('change', () => { aplicarFiltros(); if(vistaF
 selectMunicipio.addEventListener('change', aplicarFiltros);
 selectOrden.addEventListener('change', aplicarFiltros);
 inputLitros.addEventListener('input', () => { aplicarFiltros(); if(vistaFavoritos.classList.contains('activa')) renderizarFavoritos(); });
+inputConsumo.addEventListener('input', () => { aplicarFiltros(); if(vistaFavoritos.classList.contains('activa')) renderizarFavoritos(); });
 buscador.addEventListener('input', aplicarFiltros);
 
 cargarProvincias();
